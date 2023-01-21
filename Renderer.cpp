@@ -42,6 +42,7 @@ namespace dae {
 		{
 			m_IsInitialized = true;
 			std::cout << "DirectX is initialized and ready!\n";
+			std::cout << "Extra Features:\n Multithreading for software.\n";
 
 			std::vector<std::string>names{ "Resources/vehicle.obj", "Resources/fireFX.obj" };
 			for (size_t i = 0; i < names.size(); i++)
