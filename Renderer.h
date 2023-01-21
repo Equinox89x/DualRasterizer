@@ -129,7 +129,7 @@ namespace dae
 		//Function that transforms the vertices from the mesh from World space to Screen space
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out, const Matrix& worldMatrix) const;
 
-		void HandleRenderBB(std::vector<Vertex_Out>& verts, ColorRGB& finalColor) const;
+		void HandleRenderBB(std::vector<Vertex_Out>& verts) const;
 
 		Vertex_Out CalculateVertexWithAttributes(const std::vector<Vertex_Out>& verts, float w0, float w1, float w2, float& outGloss, ColorRGB& outSpecularKS) const;
 		ColorRGB PixelShading(const Vertex_Out& v, const float gloss, const ColorRGB specularKS) const;

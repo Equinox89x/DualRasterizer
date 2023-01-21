@@ -3,6 +3,10 @@
 #include "Material.h"
 #include "Utils.h"
 #include "Effect.h"
+#include <future>
+#include <ppl.h>
+#include <iterator>
+#include <vector>
 
 namespace dae {
 
@@ -169,17 +173,13 @@ namespace dae {
 		}
 
 		if (m_HasRotation) {
-			//m_RotationAngle = (cos(pTimer->GetTotal()) + 1.f) / 2.f * PI_2;
 			m_RotationAngle = pTimer->GetTotal() * (m_RotationSpeed * PI / 180);
 			m_RotationTransform = Matrix::CreateRotationY(m_RotationAngle);
 			for (Mesh* mesh : m_Meshes)
 			{
+				mesh->SetWorldMatrix(m_ScaleTransform * m_RotationTransform * m_TranslationTransform);
 				if (m_IsHardware) {
-					mesh->SetWorldMatrix(m_ScaleTransform * m_RotationTransform * m_TranslationTransform);
 					mesh->SetMatrix(m_Camera.m_WorldViewProjectionMatrix, mesh->m_WorldMatrix, m_Camera.m_Origin);
-				}
-				else {
-					mesh->SetWorldMatrix(m_ScaleTransform * m_RotationTransform * m_TranslationTransform);
 				}
 			}
 		}
@@ -213,15 +213,9 @@ namespace dae {
 			SDL_LockSurface(m_pBackBuffer);
 
 			const int size{ m_Width * m_Height };
-			for (int i{ 0 }; i < size; i++)
-			{
-				m_pDepthBuffer[i] = FLT_MAX;
-			}
+			std::fill(m_pDepthBuffer, m_pDepthBuffer + size, FLT_MAX);
+			std::fill(m_pColorBuffer, m_pColorBuffer + size, m_SelectedColor);
 
-			for (int i{ 0 }; i < size; i++)
-			{
-				m_pColorBuffer[i] = m_SelectedColor;
-			}
 			SDL_FillRect(m_pBackBuffer, nullptr, m_HasClearColor ? 0x191919 : 0x636363);
 
 
@@ -229,9 +223,9 @@ namespace dae {
 			//Loop through meshes and perform correct render based on topology
 			/*for (const Mesh* mesh : m_Meshes)
 			{*/
+				//we only render the first mesh because we don't render the flame in the software version.
 				RenderMeshTriangleList(*m_Meshes[0]);
-			//}BB
-
+			//}
 
 			//@END
 			//Update SDL Surface
@@ -242,8 +236,10 @@ namespace dae {
 	}
 
 	#pragma region software
-	void Renderer::HandleRenderBB(std::vector<Vertex_Out>& verts, ColorRGB& finalColor) const
+	void Renderer::HandleRenderBB(std::vector<Vertex_Out>& verts) const
 	{
+		ColorRGB finalColor{};
+
 		//Triangle edge
 		const Vector2 a{ verts[1].position.x - verts[0].position.x, verts[1].position.y - verts[0].position.y };
 		const Vector2 b{ verts[2].position.x - verts[1].position.x, verts[2].position.y - verts[1].position.y };
@@ -316,13 +312,6 @@ namespace dae {
 						}
 						m_pDepthBuffer[currentPixel] = interpolatedDepth;
 
-						////Deciding color
-						//Vector2 interpolatedUV{
-						//	(((verts[0].uv / verts[0].position.z) * w0) +
-						//	((verts[1].uv / verts[1].position.z) * w1) +
-						//	((verts[2].uv / verts[2].position.z) * w2)) * interpolatedDepth 
-						//};
-
 						float gloss{ 0 };
 						ColorRGB specularKS{  };
 						const Vertex_Out pixelVertexPos{ CalculateVertexWithAttributes(verts, w0, w1, w2, gloss, specularKS) };
@@ -352,8 +341,6 @@ namespace dae {
 			}
 		}
 	}
-
-	
 
 	Vertex_Out Renderer::CalculateVertexWithAttributes(const std::vector<Vertex_Out>& verts, const float w0, const float w1, const float w2, float& outGloss, ColorRGB& outSpecularKS) const
 	{
@@ -459,24 +446,24 @@ namespace dae {
 
 	void Renderer::RenderMeshTriangleList(const Mesh& mesh) const
 	{
-		ColorRGB finalColor{};
+		//we divide the amount by 3 because we are going to get 3 vertexes of a triangle per loop
+		concurrency::parallel_for(0u, uint32_t((mesh.indices.size()-2) / 3), [&, this](int i) {
 
-		//loop through indices (triangle ID's)
-		for (int indiceIter = 0; indiceIter < mesh.indices.size(); indiceIter += 3)
-		{
+			int index = i * 3;
 			//for every 3rd indice, calculate the triangle
 			#pragma region Calculate the triangles from a mesh
-			const int indice1{ static_cast<int>(mesh.indices[indiceIter]) };
-			const int indice2{ static_cast<int>(mesh.indices[indiceIter + 1]) };
-			const int indice3{ static_cast<int>(mesh.indices[indiceIter + 2]) };
+			const int indice1{ static_cast<int>(mesh.indices[index]) };
+			const int indice2{ static_cast<int>(mesh.indices[index + 1]) };
+			const int indice3{ static_cast<int>(mesh.indices[index + 2]) };
 			std::vector triangleVerts{ mesh.vertices[indice1], mesh.vertices[indice2], mesh.vertices[indice3] };
 			#pragma endregion
 
 			std::vector<Vertex_Out> verts{ };
+
 			VertexTransformationFunction(triangleVerts, verts, mesh.m_WorldMatrix);
 
-			HandleRenderBB(verts, finalColor);
-		}
+			HandleRenderBB(verts);
+		});
 	}
 
 	void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out, const Matrix& worldMatrix) const
