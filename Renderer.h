@@ -80,7 +80,7 @@ namespace dae
 		bool m_HasNormalMap{ true };
 		bool m_HasFire{ true };
 		bool m_IsShowDepthBuffer{ false };
-		bool m_HasBB{ true };
+		bool m_HasBB{ false };
 		bool m_HasClearColor{ false };
 
 		ColorRGB m_UniformColor{ .1f, .1f, .1f };

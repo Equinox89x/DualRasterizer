@@ -316,12 +316,12 @@ namespace dae {
 						}
 						m_pDepthBuffer[currentPixel] = interpolatedDepth;
 
-						//Deciding color
-						Vector2 interpolatedUV{
-							(((verts[0].uv / verts[0].position.z) * w0) +
-							((verts[1].uv / verts[1].position.z) * w1) +
-							((verts[2].uv / verts[2].position.z) * w2)) * interpolatedDepth 
-						};
+						////Deciding color
+						//Vector2 interpolatedUV{
+						//	(((verts[0].uv / verts[0].position.z) * w0) +
+						//	((verts[1].uv / verts[1].position.z) * w1) +
+						//	((verts[2].uv / verts[2].position.z) * w2)) * interpolatedDepth 
+						//};
 
 						float gloss{ 0 };
 						ColorRGB specularKS{  };
